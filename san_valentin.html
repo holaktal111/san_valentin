@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego de San Valentín</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: radial-gradient(circle, #ff758c, #ff7eb3);
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+        }
+        .game-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 50%;
+        }
+        canvas {
+            background: white;
+            border: 2px solid black;
+        }
+        .message {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .love-message {
+            text-align: center;
+            color: white;
+            text-shadow: 2px 2px 15px rgba(0, 0, 0, 0.6);
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .love-message h1 {
+            font-size: 90px;
+            margin: 0;
+        }
+        .heart-big {
+            font-size: 150px;
+            color: crimson;
+            animation: glow 1.5s infinite alternate;
+        }
+        @keyframes glow {
+            0% { text-shadow: 0 0 20px crimson; }
+            100% { text-shadow: 0 0 50px crimson; }
+        }
+        #score {
+            font-size: 60px;
+            font-weight: bold;
+        }
+
+        /* Instrucciones */
+        .instructions {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+        .instructions button {
+            background: crimson;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <audio autoplay loop>
+        <source src="romantic-music.mp3" type="audio/mp3">
+    </audio>
+    
+    <!-- Instrucciones -->
+    <div id="instructions" class="instructions">
+        <h2>¿Cómo jugar?</h2>
+        <p>Mueve al personaje con las flechas <strong>Izquierda (←)</strong> y <strong>Derecha (→)</strong>.</p>
+        <p>Atrapa <strong>30 corazones</strong> para ganar y ver tu mensaje especial. ❤</p>
+        <button onclick="startGame()">¡Entendido!</button>
+    </div>
+
+    <div class="container">
+        <div class="game-container">
+            <canvas id="gameCanvas" width="500" height="500"></canvas>
+            <div id="valentineMessage" class="message">¿Quieres ser mi San Valentín? ❤</div>
+        </div>
+        <div class="love-message">
+            <h1>TE AMO</h1>
+            <div class="heart-big">❤</div>
+            <p id="score">0 / 30</p>
+        </div>
+    </div>
+    
+    <script>
+        let gameStarted = false;
+        let heartInterval;
+        
+        function startGame() {
+            document.getElementById("instructions").style.display = "none";
+            gameStarted = true;
+            heartInterval = setInterval(spawnHeart, 400);
+            gameLoop();
+        }
+
+        // Evitar que Enter cierre las instrucciones
+        document.addEventListener("keydown", (e) => {
+            if (!gameStarted && e.key === "Enter") {
+                e.preventDefault(); // Bloquea la acción de Enter
+            }
+        });
+
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreText = document.getElementById("score");
+        const message = document.getElementById("valentineMessage");
+
+        let player = { x: 240, y: 450, width: 30, height: 30, dx: 0, dy: 0, speed: 7, jumping: false };
+        let hearts = [];
+        let score = 0;
+        let gameActive = true;
+
+        function spawnHeart() {
+            if (gameActive) {
+                hearts.push({ x: Math.random() * 470, y: 0, dy: 7, size: 60 }); // Reducida velocidad de caída
+            }
+        }
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowRight") player.dx = player.speed;
+            if (e.key === "ArrowLeft") player.dx = -player.speed;
+        });
+        document.addEventListener("keyup", (e) => {
+            if (e.key === "ArrowRight" || e.key === "ArrowLeft") player.dx = 0;
+        });
+
+        function update() {
+            if (!gameStarted) return; // No actualiza nada hasta que el usuario inicie el juego
+
+            player.x += player.dx;
+            hearts.forEach(heart => heart.y += heart.dy);
+
+            hearts = hearts.filter(heart => {
+                if (
+                    player.x < heart.x + heart.size &&
+                    player.x + player.width > heart.x &&
+                    player.y < heart.y + heart.size &&
+                    player.y + player.height > heart.y
+                ) {
+                    score++;
+                    scoreText.textContent = score + " / 30";
+                    if (score >= 30) {
+                        message.style.display = "block";
+                        gameActive = false;
+                        clearInterval(heartInterval);
+                    }
+                    return false;
+                }
+                return heart.y < 500;
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "black";
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            ctx.fillStyle = "red";
+            ctx.font = "70px Arial";
+            hearts.forEach(heart => ctx.fillText("❤", heart.x, heart.y));
+        }
+
+        function gameLoop() {
+            if (gameStarted) {
+                update();
+                draw();
+                requestAnimationFrame(gameLoop);
+            }
+        }
+    </script>
+</body>
+</html>
